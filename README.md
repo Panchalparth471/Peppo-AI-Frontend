@@ -1,159 +1,185 @@
-Peppo AI — Frontend (React + Tailwind)
+# Peppo AI — Frontend (React + Tailwind)
 
-Repository: https://github.com/Panchalparth471/Peppo-AI-Frontend
+**Repository:** [https://github.com/Panchalparth471/Peppo-AI-Frontend](https://github.com/Panchalparth471/Peppo-AI-Frontend)
 
-This is the frontend for Peppo AI — a minimal chat-like UI that sends short text prompts to your backend and plays back the generated 5s video returned by the server.
+This is the frontend for **Peppo AI** — a minimal chat-like UI that sends short text prompts to your backend and plays back the generated \~5s video returned by the server.
 
-This README explains how to run the frontend locally, connect it to a backend (Flask/other), build for production and deploy. It assumes the backend exposes /api/generate-video and /api/session as described below.
+This README shows how to run the frontend locally, connect it to a backend (Flask or any server that matches the API contract), build for production, and deploy. It assumes the backend exposes `/api/generate-video` and `/api/session` as described below.
 
-Features
+---
 
-React + Tailwind UI (chat interface)
+## Features
 
-Reads backend base URL from REACT_APP_API_BASE_URL (build-time env)
+* React + Tailwind UI (chat interface)
+* Reads backend base URL from `REACT_APP_API_BASE_URL` (build-time env)
+* Plays `video/mp4` blobs returned by backend via object URLs
+* Small inline loading spinner next to the latest user message
+* Suggestion buttons to quickly send example prompts
 
-Plays video/mp4 blobs returned by backend via object URLs
+---
 
-Small inline loading spinner next to the latest user message
+## Prerequisites
 
-Suggestion buttons to quickly send example prompts
+* Node.js 16+ (Node 18+ recommended)
+* npm 8+ or 9+
+* (Optional) A running backend that responds to `/api/generate-video` & `/api/session`.
 
-Prerequisites
+  * Example backend: Flask app that returns binary `video/mp4` for `/api/generate-video`.
 
-Node.js 16+ (Node 18+ recommended)
+---
 
-npm 8+ or 9+
+## Quickstart — Local development
 
-(Optional) a running backend that responds to /api/generate-video & /api/session
+### 1. Clone the repo
 
-Example backend: Flask app that returns binary video/mp4 for /api/generate-video.
-
-Quickstart — Local development
-
-Clone the repo (if you haven't already):
-
+```bash
 git clone https://github.com/Panchalparth471/Peppo-AI-Frontend.git
 cd Peppo-AI-Frontend
+```
 
+### 2. Install dependencies
 
-Install dependencies:
-
+```bash
 npm ci
 # or
 npm install
+```
 
+### 3. Configure backend base URL (optional)
 
-Configure the backend base URL (optional):
+Create a file named `.env.local` in the project root (this file should be in `.gitignore`):
 
-Create /.env.local in the project root (this file should be in .gitignore):
-
+```env
 # If your backend runs at http://localhost:8000
 REACT_APP_API_BASE_URL=http://localhost:8000
+```
 
+* If `REACT_APP_API_BASE_URL` is blank or missing, the app will use **relative** requests (e.g. `fetch('/api/generate-video')`), which is ideal when the frontend is served from the same origin as the backend.
 
-If REACT_APP_API_BASE_URL is blank or missing, the app will use relative requests (e.g. fetch('/api/generate-video')), which is ideal when the frontend is served from the same origin as the backend.
+**Alternative (proxy method)**: Add a `proxy` entry to `package.json` for dev-time convenience:
 
-As an alternative for development, you can add a proxy to package.json:
-
+```json
 "proxy": "http://localhost:8000"
+```
 
+This allows you to call `/api/...` without setting `REACT_APP_API_BASE_URL` during development.
 
-This lets you call /api/... without setting REACT_APP_API_BASE_URL.
+### 4. Start the dev server
 
-Start the dev server:
-
+```bash
 npm start
+```
 
+Open: `http://localhost:3000`
 
-Open: http://localhost:3000
+---
 
-API the frontend expects
+## API the frontend expects
 
-The frontend sends requests to the backend. The simplest expected endpoints:
+The frontend sends requests to the backend. The simplest expected endpoints are:
 
-POST /api/session
+### `POST /api/session`
 
-Returns JSON { "session_id": "<id>" }
+* Response: `200` JSON
 
-POST /api/generate-video
+```json
+{ "session_id": "<id>" }
+```
 
-Request body JSON: { "prompt": "text", "session_id": "<id>" }
+### `POST /api/generate-video`
 
-Returns binary video/mp4 (Content-Type: video/mp4) — the frontend will create an object URL and play it.
+* Request body JSON:
 
-Optional response headers you may find helpful:
+```json
+{ "prompt": "Some text prompt", "session_id": "<id>" }
+```
 
-X-Session-Id — session id
+* Response: binary `video/mp4` (Content-Type: `video/mp4`). The frontend will create an object URL from the blob and play it.
 
-X-Video-Mock — "true" if server returned a sample/mock
+* Optional helpful response headers:
 
-X-Generation-Time — seconds spent generating
+  * `X-Session-Id` — session id
+  * `X-Video-Mock` — `"true"` if the server returned a sample/mock video
+  * `X-Generation-Time` — seconds spent generating
 
-If your backend has different endpoints, either adapt the frontend fetch URLs or provide an adapter route.
+If your backend uses different endpoints, either adapt the frontend fetch URLs or provide a small adapter in the backend.
 
-Build for production
+---
 
-Build:
+## Build for production
 
+1. Build the React app:
+
+```bash
 npm ci
 npm run build
+```
 
+2. The production-ready static files will be in `build/`. Serve those files with any static server (nginx, Apache), or integrate them with your backend (serve `build/index.html` and static files).
 
-The production-ready static files will be in build/. Serve those files with any static server (nginx, Apache), or integrate them with your backend (serve build/index.html and static files).
+---
 
-Deploying the frontend
+## Deploying the frontend
 
-You can deploy this frontend as a static site (Netlify, Vercel, GitHub Pages) or bundle it with your backend.
+You can deploy this frontend as a static site (Netlify, Vercel, GitHub Pages) or bundle it with your backend in a single host.
 
-Netlify / Vercel / Static hosts
+### Netlify / Vercel / Static hosts
 
-Set the build command: npm ci && npm run build
+* Build command: `npm ci && npm run build`
+* Output directory: `build`
+* Set environment variable `REACT_APP_API_BASE_URL` in the host to point to your deployed backend (or leave blank to use relative paths when frontend and backend are same-origin).
 
-Set the output directory: build
+### If you serve frontend + backend from the same origin (monorepo)
 
-Set environment variable REACT_APP_API_BASE_URL (point to your deployed backend), or leave blank to use relative paths (when served from same domain).
+Build the frontend and make `build/` available to the backend server to serve statically. For example, place `build/` under your backend's static directory or configure Flask to serve `build/index.html`.
 
-If you serve frontend + backend from the same origin (monorepo)
+### Render (monorepo note)
 
-Build the frontend and make build/ available to the backend server to serve statically. (E.g., place build/ under backend's static directory or use Flask to serve build/index.html.)
+If you deploy a combined repo with backend + frontend on Render and Render runs `npm run build` from repo root and `react-scripts` cannot be found, use this **Build Command** in Render settings (adjust if your frontend folder is different):
 
-Render (monorepo note)
-If you deploy a combined repo with backend + frontend on Render and Render runs npm run build from repo root and react-scripts cannot be found, use this Build Command in Render settings:
-
+```bash
 cd client && npm ci && npm run build && cd .. && pip install -r requirements.txt
+```
 
+> Only relevant when React is in a `client/` subfolder. If React is at repo root you can use `npm ci && npm run build`.
 
-(Only relevant if you put React code in a client/ folder. For this repo, you can just use npm ci && npm run build.)
+---
 
-Troubleshooting
+## Troubleshooting
 
-react-scripts: not found in CI / deploy
+### `react-scripts: not found` in CI / deploy
 
-Ensure npm ci / npm install runs before npm run build.
+* Ensure `npm ci` or `npm install` runs before `npm run build`.
+* Verify `react-scripts` is present in `dependencies` in `package.json`.
+* If the CI/build runs from the repo root but the React app is inside `client/`, make sure the build command changes the working directory (see Render note above).
 
-Make sure react-scripts is present in dependencies of package.json. If your build runs in a different working directory (e.g., monorepo root), ensure the build command changes to the React directory (see Render instructions above).
+### Tailwind / build errors in CI
 
-Tailwind/build errors in CI
+* Tailwind and build tools must be installed during build. If CI skips `devDependencies`, either move build-time tools to `dependencies` or ensure CI installs dev deps (e.g., `npm ci --include=dev`).
 
-Tailwind or other build tools must be installed during build. If CI skips devDependencies, move build-time tools to dependencies or ensure CI installs dev deps.
+### Backend CORS / proxy issues
 
-Backend CORS / proxy issues
+* If backend is on a different origin, enable CORS on the backend or set `REACT_APP_API_BASE_URL` to the backend origin.
 
-If backend is on a different origin, configure CORS on the backend or set REACT_APP_API_BASE_URL to the backend origin.
+---
 
-Where to change the API base URL in the code
+## Where to change the API base URL in the code
 
-At the top of the Chat component, the code uses:
+At the top of the Chat component the code uses:
 
+```js
 const API_BASE = process.env.REACT_APP_API_BASE_URL || "";
-// and helper:
+// and a helper function like:
 const apiUrl = (path) => `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+```
 
+Set `REACT_APP_API_BASE_URL` in `.env.local` or your hosting environment accordingly.
 
-So set REACT_APP_API_BASE_URL in .env.local or the hosting environment.
+---
 
-License & Credits
+## License & Credits
 
-The starter UI is built using the React + Tailwind starter pack contained in this repo.
+* The starter UI is built using the React + Tailwind starter pack contained in this repo.
+* Add your license in `LICENSE` (for example, MIT).
 
-Add your license in LICENSE (e.g., MIT) if you want to make this public domain or permissive.
+-
